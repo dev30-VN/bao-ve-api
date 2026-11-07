@@ -1,0 +1,10 @@
+# Bỏ qua môi trường ảo Python
+venv/
+env/
+__pycache__/
+
+# Bỏ qua các file chứa biến môi trường và khóa bí mật
+.env
+
+# Bỏ qua thư mục hệ thống của VS Code
+.vscode/
