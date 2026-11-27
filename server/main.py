@@ -1,13 +1,12 @@
 from fastapi import FastAPI, Depends
 from pydantic import BaseModel
-from server.security import verify_hmac_only
+from server.security import verify_full_security
 
 app = FastAPI(
     title="API Security Gateway - Đề tài B14",
-    description="Hệ thống minh họa bảo vệ API: HMAC Signature, Anti-Replay và Rate Limiting"
+    description="Hệ thống bảo vệ API: HMAC-SHA256, Anti-Replay (Timestamp + Nonce) và Rate Limiting"
 )
 
-# Mô hình dữ liệu giao dịch chuyển khoản mẫu
 class TransferRequest(BaseModel):
     from_account: str
     to_account: str
@@ -21,19 +20,20 @@ async def unprotected_transfer(payload: TransferRequest):
         "status": "SUCCESS",
         "mode": "UNPROTECTED",
         "message": f"Đã chuyển {payload.amount:,.0f} VND từ {payload.from_account} sang {payload.to_account}",
-        "data": payload.dict()
+        "data": payload.model_dump()
     }
 
-# 2. API ĐÃ BẢO VỆ BẰNG CHỮ KÝ HMAC
-@app.post("/api/v1/protected/transfer", tags=["2. Protected (HMAC)"])
+# 2. API ĐÃ BẢO VỆ ĐẦY ĐỦ (HMAC + Anti-Replay + Rate Limit)
+@app.post("/api/v1/protected/transfer", tags=["2. Protected (Full Security)"])
 async def protected_transfer(
     payload: TransferRequest,
-    auth_info: dict = Depends(verify_hmac_only)
+    auth_info: dict = Depends(verify_full_security)
 ):
     return {
         "status": "SUCCESS",
-        "mode": "PROTECTED_HMAC",
+        "mode": "PROTECTED_FULL",
         "verified_client": auth_info["api_key"],
-        "message": f"Giao dịch hợp lệ! Đã chuyển {payload.amount:,.0f} VND từ {payload.from_account} sang {payload.to_account}",
-        "data": payload.dict()
+        "remaining_quota_in_minute": auth_info["remaining_quota"],
+        "message": f"Giao dịch an toàn! Đã chuyển {payload.amount:,.0f} VND từ {payload.from_account} sang {payload.to_account}",
+        "data": payload.model_dump()
     }
